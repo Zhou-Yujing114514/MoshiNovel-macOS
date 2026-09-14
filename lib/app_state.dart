@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api_service.dart';
@@ -22,14 +23,19 @@ class AppState extends ChangeNotifier {
   static const _dayModeKey = 'moshi_day_mode';
   static const _cookiesKey = 'moshi_cookies';
 
+  // 会话 cookie 属于敏感凭证，使用系统安全存储（Keychain / Keystore / libsecret）
+  static final _storage = FlutterSecureStorage(
+    aOptions: const AndroidOptions(encryptedSharedPreferences: true),
+  );
+
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     isDayMode = prefs.getBool(_dayModeKey) ?? false;
 
-    // 恢复会话 cookie
-    final saved = prefs.getString(_cookiesKey);
-    if (saved != null && saved.isNotEmpty) {
-      try {
+    // 恢复会话 cookie（从安全存储读取）
+    try {
+      final saved = await _storage.read(key: _cookiesKey);
+      if (saved != null && saved.isNotEmpty) {
         final decoded = jsonDecode(saved);
         if (decoded is Map<String, dynamic>) {
           ApiService.shared.restoreCookies(
@@ -40,25 +46,27 @@ class AppState extends ChangeNotifier {
             if (user != null) {
               setUser(user);
             } else {
-              ApiService.shared.restoreCookies({});
+              await _storage.delete(key: _cookiesKey);
             }
           } catch (_) {
-            ApiService.shared.restoreCookies({});
+            await _storage.delete(key: _cookiesKey);
           }
         }
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
   }
 
   Future<void> persistSession() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_dayModeKey, isDayMode);
     final cookies = ApiService.shared.allCookies;
-    if (cookies.isNotEmpty) {
-      await prefs.setString(_cookiesKey, jsonEncode(cookies));
-    } else {
-      await prefs.remove(_cookiesKey);
-    }
+    try {
+      if (cookies.isNotEmpty) {
+        await _storage.write(key: _cookiesKey, value: jsonEncode(cookies));
+      } else {
+        await _storage.delete(key: _cookiesKey);
+      }
+    } catch (_) {}
   }
 
   void setUser(User? user) {

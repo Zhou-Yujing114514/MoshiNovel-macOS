@@ -1,17 +1,33 @@
-# moshi_novel
+# 摩柿小说下载站 · MoshiNovel
 
-A new Flutter project.
+摩柿小说下载站（MoshiNovel）多平台 Flutter 客户端，支持 Windows / macOS / Linux / Android。
 
-## Getting Started
+## 功能
 
-This project is a starting point for a Flutter application.
+- 账号登录 / 注册（Cookie 会话，安全存储）
+- 搜索小说、提交提取任务（TXT / EPUB / PDF）
+- 任务中心：查看进度、取消任务、下载文件
+- 在线阅读器：章节切换、字号调节、日 / 夜间模式
+- 个人中心：日夜间切换、站点信息
+- 站长管理面板（站点设置、用户管理）
 
-A few resources to get you started if this is your first Flutter project:
+## 服务器
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+默认连接 `https://morax.kdns.fr`（仅 HTTPS / WSS，无明文）。
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 开发
+
+```bash
+flutter pub get
+flutter run
+```
+
+各平台构建由 GitHub Actions 完成（见 `.github/workflows/build.yml`）。
+
+## 版本
+
+当前版本：**1.1.0+1**（摩柿小说统一 v1.x.x 系列）。
+
+## License
+
+MIT © 2026 Zhou-Yujing114514

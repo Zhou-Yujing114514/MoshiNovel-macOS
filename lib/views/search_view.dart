@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../api_service.dart';
@@ -355,19 +356,22 @@ class _BookCover extends StatelessWidget {
         : 'https://morax.kdns.fr${cover!.startsWith('/') ? cover! : '/$cover'}';
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
-      child: Image.network(
-        url,
+      child: CachedNetworkImage(
+        imageUrl: url,
         width: 52,
         height: 68,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
+        placeholder: (_, __) => Container(
+          width: 52,
+          height: 68,
+          color: M.card(app),
+        ),
+        errorWidget: (_, __, ___) => Container(
           width: 52,
           height: 68,
           color: M.card(app),
           child: Icon(Icons.menu_book, size: 24, color: M.muted(app)),
         ),
-        loadingBuilder: (_, child, progress) =>
-            progress == null ? child : Container(width: 52, height: 68),
       ),
     );
   }
