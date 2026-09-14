@@ -1,0 +1,74 @@
+name: Build macOS
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build macOS (universal)
+        run: flutter build macos --release
+
+      - name: Thin arm64 binary
+        run: |
+          APP="build/macos/Build/Products/Release/moshi_novel.app"
+          mkdir -p dist/arm64
+          cp -R "$APP" "dist/arm64/moshi_novel.app"
+          lipo -thin arm64 "dist/arm64/moshi_novel.app/Contents/MacOS/moshi_novel" -output /tmp/runner_arm64
+          mv /tmp/runner_arm64 "dist/arm64/moshi_novel.app/Contents/MacOS/moshi_novel"
+          if [ -d "dist/arm64/moshi_novel.app/Contents/Frameworks/FlutterMacOS.framework" ]; then
+            lipo -thin arm64 "dist/arm64/moshi_novel.app/Contents/Frameworks/FlutterMacOS.framework/FlutterMacOS" -output /tmp/flutter_arm64
+            mv /tmp/flutter_arm64 "dist/arm64/moshi_novel.app/Contents/Frameworks/FlutterMacOS.framework/FlutterMacOS"
+          fi
+
+      - name: Thin x86_64 binary
+        run: |
+          APP="build/macos/Build/Products/Release/moshi_novel.app"
+          mkdir -p dist/x86_64
+          cp -R "$APP" "dist/x86_64/moshi_novel.app"
+          lipo -thin x86_64 "dist/x86_64/moshi_novel.app/Contents/MacOS/moshi_novel" -output /tmp/runner_x64
+          mv /tmp/runner_x64 "dist/x86_64/moshi_novel.app/Contents/MacOS/moshi_novel"
+          if [ -d "dist/x86_64/moshi_novel.app/Contents/Frameworks/FlutterMacOS.framework" ]; then
+            lipo -thin x86_64 "dist/x86_64/moshi_novel.app/Contents/Frameworks/FlutterMacOS.framework/FlutterMacOS" -output /tmp/flutter_x64
+            mv /tmp/flutter_x64 "dist/x86_64/moshi_novel.app/Contents/Frameworks/FlutterMacOS.framework/FlutterMacOS"
+          fi
+
+      - name: Package arm64 (DMG)
+        run: |
+          mkdir -p dist/dmg-arm64
+          cp -R "dist/arm64/moshi_novel.app" "dist/dmg-arm64/"
+          ln -s /Applications "dist/dmg-arm64/Applications"
+          hdiutil create -volname "MoshiNovel" -srcfolder "dist/dmg-arm64" -ov -format UDZO "MoshiNovel-macOS-arm64.dmg"
+          ls -lh MoshiNovel-macOS-arm64.dmg
+
+      - name: Package x86_64 (DMG)
+        run: |
+          mkdir -p dist/dmg-x64
+          cp -R "dist/x86_64/moshi_novel.app" "dist/dmg-x64/"
+          ln -s /Applications "dist/dmg-x64/Applications"
+          hdiutil create -volname "MoshiNovel" -srcfolder "dist/dmg-x64" -ov -format UDZO "MoshiNovel-macOS-x86_64.dmg"
+          ls -lh MoshiNovel-macOS-x86_64.dmg
+
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            MoshiNovel-macOS-arm64.dmg
+            MoshiNovel-macOS-x86_64.dmg
