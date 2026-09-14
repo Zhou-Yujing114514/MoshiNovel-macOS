@@ -166,12 +166,19 @@ class ApiService {
 
   Future<List<Chapter>> fetchChapters(int taskId) async {
     final resp = await _send('GET', '/api/book/$taskId/chapters');
-    return _decode(resp, (json) {
-      final list = json['items'] as List? ?? [];
-      return list
-          .map((e) => Chapter.fromJson(e as Map<String, dynamic>))
-          .toList();
-    });
+    // 注意：/chapters 返回的是 JSON 数组，不是 {items: [...]} 对象
+    final dynamic data;
+    try {
+      data = jsonDecode(utf8.decode(resp.bodyBytes));
+    } catch (_) {
+      throw ApiException(resp.statusCode, '响应解析失败 (${resp.statusCode})');
+    }
+    if (data is! List) {
+      throw ApiException(resp.statusCode, '响应格式错误');
+    }
+    return data
+        .map((e) => Chapter.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<String> fetchChapterContent(int taskId, int index) async {
