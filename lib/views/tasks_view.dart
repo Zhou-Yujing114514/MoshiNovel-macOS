@@ -117,8 +117,10 @@ class _TasksViewState extends State<TasksView> {
       }
       final bytes = resp.bodyBytes;
       final ext = _extensionFor(task.format);
-      final suggested =
-          '${task.title ?? 'book_${task.id}'}.$ext'.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      // Sanitize the server-provided title before using it as a filename:
+      // strip any path components, reject ".." segments, and replace illegal chars.
+      final rawTitle = task.title ?? 'book_${task.id}';
+      final suggested = '${_sanitizeFilename(rawTitle)}.$ext';
       String? savePath;
       if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
         final loc = await getSaveLocation(
@@ -165,6 +167,27 @@ class _TasksViewState extends State<TasksView> {
       default:
         return 'txt';
     }
+  }
+
+  /// Sanitize a server-provided title so it is safe to use as a local filename.
+  /// - Takes only the basename (drops any directory components / drive letters).
+  /// - Replaces path separators and illegal characters with '_'.
+  /// - Collapses ".." and leading dots so the result cannot escape the target dir.
+  String _sanitizeFilename(String name) {
+    var s = name.trim();
+    // Drop any directory portion (both / and \) and any Windows drive letter.
+    s = s.replaceAll('\\', '/');
+    if (s.contains('/')) {
+      s = s.split('/').last;
+    }
+    // Replace illegal characters.
+    s = s.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+    // Collapse any remaining ".." segments to "_".
+    s = s.replaceAll('..', '_');
+    // Strip leading dots / spaces so the result cannot be hidden or absolute.
+    s = s.replaceFirst(RegExp(r'^[.\s]+'), '');
+    if (s.isEmpty) s = 'book';
+    return s;
   }
 
   void _openReader(DownloadTask task) {
